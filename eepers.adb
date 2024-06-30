@@ -1,5 +1,4 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Interfaces.C; use Interfaces.C;
 with Raylib; use Raylib;
 with Raymath; use Raymath;
 with Ada.Strings.Unbounded;
@@ -11,7 +10,6 @@ with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Ada.Strings;
 with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Numerics.Discrete_Random;
-with Interfaces.C.Pointers;
 with Ada.Unchecked_Conversion;
 with Ada.Numerics; use Ada.Numerics;
 
@@ -22,7 +20,7 @@ procedure Eepers is
 
     type Footsteps_Range is mod 4;
     Footsteps_Sounds: array (Footsteps_Range) of Sound;
-    Footsteps_Pitches: constant array (Footsteps_Range) of C_Float := (1.7, 1.6, 1.5, 1.4);
+    Footsteps_Pitches: constant array (Footsteps_Range) of Float := (1.7, 1.6, 1.5, 1.4);
     package Random_Footsteps is
         new Ada.Numerics.Discrete_Random(Result_Subtype => Footsteps_Range);
     Footsteps_Gen: Random_Footsteps.Generator;
@@ -38,8 +36,8 @@ procedure Eepers is
     Tutorial_Font: Font;
     Death_Font: Font;
 
-    Tutorial_Font_Size: constant Int := 42;
-    Death_Font_Size: constant Int := 68;
+    Tutorial_Font_Size: constant Positive := 42;
+    Death_Font_Size: constant Positive := 68;
 
     DEVELOPMENT : constant Boolean := False;
 
@@ -65,9 +63,9 @@ procedure Eepers is
     type HSV is array (HSV_Comp) of Byte;
 
     function HSV_To_RGB(C: HSV) return Color is
-        H: constant C_Float := C_Float(C(Hue))/255.0*360.0;
-        S: constant C_Float := C_Float(C(Sat))/255.0;
-        V: constant C_Float := C_Float(C(Value))/255.0;
+        H: constant Float := Float(C(Hue))/255.0*360.0;
+        S: constant Float := Float(C(Sat))/255.0;
+        V: constant Float := Float(C(Value))/255.0;
     begin
         return Color_From_HSV(H, S, V);
     end;
@@ -95,7 +93,7 @@ procedure Eepers is
     Palette_RGB: array (Palette) of Color := (others => (A => 255, others => 0));
     Palette_HSV: array (Palette) of HSV := (others => (others => 0));
 
-    package Double_IO is new Ada.Text_IO.Float_IO(Double);
+    package Long_Float_IO is new Ada.Text_IO.Float_IO(Long_Float);
 
     procedure Save_Colors(File_Name: String) is
         F: File_Type;
@@ -156,7 +154,7 @@ procedure Eepers is
                     Palette_HSV(C)(Sat) := Byte'Value(To_String(Chop_By(Line, " ")));
                     Line := Trim(Line, Ada.Strings.Left);
                     Palette_HSV(C)(Value) := Byte'Value(To_String(Chop_By(Line, " ")));
-                    Palette_RGB(C) := Color_From_HSV(C_Float(Palette_HSV(C)(Hue))/255.0*360.0, C_Float(Palette_HSV(C)(Sat))/255.0, C_Float(Palette_HSV(C)(Value))/255.0);
+                    Palette_RGB(C) := Color_From_HSV(Float(Palette_HSV(C)(Hue))/255.0*360.0, Float(Palette_HSV(C)(Sat))/255.0, Float(Palette_HSV(C)(Value))/255.0);
                 else
                     Put_Line(File_Name & ":" & Line_Number'Image & "WARNING: Unknown Palette Color: """ & To_String(Key) & """");
                 end if;
@@ -178,11 +176,11 @@ procedure Eepers is
     GUARD_STEP_LENGTH_LIMIT      : constant Integer := 100;
     EXPLOSION_LENGTH             : constant Integer := 10;
     EYES_ANGULAR_VELOCITY        : constant Float := 10.0;
-    TUTORIAL_MOVE_WAIT_TIME_SECS : constant C_Float := 5.0;
-    TUTORIAL_BOMB_WAIT_TIME_SECS : constant C_Float := 4.0;
-    TUTORIAL_SPRINT_WAIT_TIME_SECS : constant C_Float := 15.0;
-    POPUP_ANIMATION_DURATION : constant C_Float := 0.1;
-    RESTART_TIMEOUT_SECS : constant Double := 2.0;
+    TUTORIAL_MOVE_WAIT_TIME_SECS : constant Float := 5.0;
+    TUTORIAL_BOMB_WAIT_TIME_SECS : constant Float := 4.0;
+    TUTORIAL_SPRINT_WAIT_TIME_SECS : constant Float := 15.0;
+    POPUP_ANIMATION_DURATION : constant Float := 0.1;
+    RESTART_TIMEOUT_SECS : constant Long_Float := 2.0;
 
     type IVector2 is record
         X, Y: Integer;
@@ -265,7 +263,7 @@ procedure Eepers is
 
     function To_Vector2(iv: IVector2) return Vector2 is
     begin
-        return (X => C_float(iv.X), Y => C_float(iv.Y));
+        return (X => Float(iv.X), Y => Float(iv.Y));
     end;
 
     type Eyes_Kind is (Eyes_Open, Eyes_Closed, Eyes_Angry, Eyes_Cringe, Eyes_Surprised);
@@ -312,7 +310,7 @@ procedure Eepers is
         Bombs: Integer := 0;
         Bomb_Slots: Integer := 1;
         Dead: Boolean := False;
-        Death_Time: Double;
+        Death_Time: Long_Float;
     end record;
 
     type Eeper_Kind is (Eeper_Guard, Eeper_Mother, Eeper_Gnome, Eeper_Father);
@@ -362,23 +360,24 @@ procedure Eepers is
       Right => (X => 1, Y => 0),
       Up    => (X => 0, Y => -1),
       Down  => (X => 0, Y => 1));
-
+    
+    subtype Label_Size is Natural range 1..50;
     type Popup_State is record
-        Label: Char_Array(1..50);
+        Label: String(Label_Size'Range);
         Visible: Boolean := False;
-        Animation: C_Float := 0.0;
+        Animation: Float := 0.0;
     end record;
 
     procedure Show_Popup(Popup: in out Popup_State; Text: String) is
-        Ignore: Size_t;
+        Ignore: Natural;
     begin
         if not Popup.Visible then
             Play_Sound(Popup_Show_Sound);
         end if;
         Popup.Visible := True;
-        To_C(Text, Popup.Label, Ignore);
+        Popup.Label := Text(Label_Size'Range);
     end;
-
+    
     procedure Hide_Popup(Popup: in out Popup_State) is
     begin
         Popup.Visible := False;
@@ -388,7 +387,7 @@ procedure Eepers is
     begin
         if Popup.Visible then
             if Popup.Animation < 1.0 then
-                Popup.Animation := (Popup.Animation*POPUP_ANIMATION_DURATION + Get_Frame_Time)/POPUP_ANIMATION_DURATION;
+                Popup.Animation := (Popup.Animation * POPUP_ANIMATION_DURATION + Get_Frame_Time)/POPUP_ANIMATION_DURATION;
             end if;
         else
             if Popup.Animation > 0.0 then
@@ -398,8 +397,8 @@ procedure Eepers is
 
         if Popup.Animation > 0.0 then
             declare
-                Font_Size: constant C_Float := C_Float(Tutorial_Font_Size)*Popup.Animation;
-                Popup_Bottom_Margin: constant C_Float := Font_Size*0.05;
+                Font_Size: constant Float := Float(Tutorial_Font_Size) * Popup.Animation;
+                Popup_Bottom_Margin: constant Float := Font_Size * 0.05;
                 Label_Size: constant Vector2 := Measure_Text_Ex(Tutorial_Font, Popup.Label, Font_Size, 0.0);
                 Label_Position: constant Vector2 := Start + Size*(0.5, 0.0) - Label_Size*(0.5, 1.0) - (0.0, Popup_Bottom_Margin);
             begin
@@ -412,9 +411,9 @@ procedure Eepers is
     type Tutorial_Phase is (Tutorial_Move, Tutorial_Place_Bombs, Tutorial_Waiting_For_Sprint, Tutorial_Sprint, Tutorial_Done);
     type Tutorial_State is record
         Phase: Tutorial_Phase := Tutorial_Move;
-        Waiting: C_Float := 0.0;
+        Waiting: Float := 0.0;
 
-        Prev_Step_Timestamp: Double := 0.0;
+        Prev_Step_Timestamp: Long_Float := 0.0;
         Hurry_Count: Integer := 0;
 
         Popup: Popup_State;
@@ -442,7 +441,7 @@ procedure Eepers is
         Tutorial: Tutorial_State;
         Checkpoint: Checkpoint_State;
 
-        Duration_Of_Last_Turn: Double;
+        Duration_Of_Last_Turn: Long_Float;
     end record;
 
     function Within_Map(Game: Game_State; Position: IVector2) return Boolean is
@@ -715,33 +714,34 @@ procedure Eepers is
 
     function Screen_Size return Vector2 is
     begin
-        return To_Vector2((Integer(Get_Screen_Width), Integer(Get_Screen_Height)));
+        return To_Vector2((Get_Screen_Width, Get_Screen_Height));
     end;
 
     procedure Load_Game_From_Image(File_Name: in String; Game: in out Game_State; Update_Player: Boolean; Update_Camera: Boolean) is
         type Color_Array is array (Natural range <>) of aliased Raylib.Color;
-        package Color_Pointer is new Interfaces.C.Pointers(
-          Index => Natural,
-          Element => Raylib.Color,
-          Element_Array => Color_Array,
-          Default_Terminator => (others => 0));
-        function To_Color_Pointer is new Ada.Unchecked_Conversion (Raylib.Addr, Color_Pointer.Pointer);
-        use Color_Pointer;
+        --  package Color_Pointer is new Interfaces.C.Pointers(
+        --    Index => Natural,
+        --    Element => Raylib.Color,
+        --    Element_Array => Color_Array,
+        --    Default_Terminator => (others => 0));
+        --  function To_Color_Pointer is new Ada.Unchecked_Conversion (Raylib.Addr, Color_Pointer.Pointer);
+        --  use Color_Pointer;
 
-        Img: constant Image := Raylib.Load_Image(To_C(File_Name));
-        Pixels: constant Color_Pointer.Pointer := To_Color_Pointer(Img.Data);
+        Img: constant Image := Raylib.Load_Image(File_Name);
+        -- TODO FER check that this pointer magic thing holds
+        Pixels: constant access Image := Img.Data'Access;
     begin
         if Game.Map /= null then
             Delete_Map(Game.Map);
         end if;
-        Game.Map := new Map(1..Integer(Img.Height), 1..Integer(Img.Width));
+        Game.Map := new Map(1..Img.Height, 1..Img.Width);
 
         for Eeper of Game.Eepers loop
             Eeper.Dead := True;
             if Eeper.Path /= null then
                 Delete_Path_Map(Eeper.Path);
             end if;
-            Eeper.Path := new Path_Map(1..Integer(Img.Height), 1..Integer(Img.Width));
+            Eeper.Path := new Path_Map(1..Img.Height, 1..Img.Width);
             for Y in Eeper.Path'Range(1) loop
                 for X in Eeper.Path'Range(2) loop
                     Eeper.Path(Y, X) := -1;
@@ -759,8 +759,8 @@ procedure Eepers is
         for Row in Game.Map'Range(1) loop
             for Column in Game.Map'Range(2) loop
                 declare
-                    Index: constant Ptrdiff_T := Ptrdiff_T((Row - 1)*Integer(Img.Width) + (Column - 1));
-                    Pixel: constant Color_Pointer.Pointer := Pixels + Index;
+                    Index: constant Integer := (Row - 1)*Img.Width + (Column - 1);
+                    Pixel: constant Integer := Pixels + Index;
                     Cel: Level_Cell;
                 begin
                     if Cell_By_Color(Pixel.all, Cel) then
@@ -835,13 +835,13 @@ procedure Eepers is
     end;
 
     procedure Draw_Number(Start, Size: Vector2; N: Integer; C: Color) is
-        Label: constant Char_Array := To_C(Trim(Integer'Image(N), Ada.Strings.Left));
+        Label: constant String := Trim(Integer'Image(N), Ada.Strings.Left);
         Label_Height: constant Integer := 32;
-        Label_Width: constant Integer := Integer(Measure_Text(Label, Int(Label_Height)));
+        Label_Width: constant Integer := Measure_Text(Label, Label_Height);
         Text_Size: constant Vector2 := To_Vector2((Label_Width, Label_Height));
         Position: constant Vector2 := Start + Size*0.5 - Text_Size*0.5;
     begin
-        Draw_Text(Label, Int(Position.X), Int(Position.Y), Int(Label_Height), C);
+        Draw_Text(Label, Integer(Position.X), Integer(Position.Y), Label_Height, C);
     end;
 
     procedure Draw_Number(Cell_Position: IVector2; N: Integer; C: Color) is
@@ -1022,7 +1022,7 @@ procedure Eepers is
         end loop;
     end;
 
-    Keys: constant array (Direction) of int := (
+    Keys: constant array (Direction) of Integer := (
         Left  => KEY_A,
         Right => KEY_D,
         Up    => KEY_W,
@@ -1035,19 +1035,19 @@ procedure Eepers is
         Camera_Velocity: constant Vector2 := (Camera_Target - Game.Camera.target)*2.0;
     begin
         Game.Camera.offset := Camera_Offset;
-        Game.Camera.target := Game.Camera.target + Camera_Velocity*Get_Frame_Time;
+        Game.Camera.target := Game.Camera.target + Camera_Velocity * Get_Frame_Time;
         --  TODO: animate zoom similarly to Game.Camera.target
         --    So it looks cool when you resize the game in the window mode.
         --  TODO: The tutorial signs look gross on bigger screens.
         --    We need to do something with the fonts
-        Game.Camera.zoom := C_Float'Max(Screen_Size.x/1920.0, Screen_Size.y/1080.0);
+        Game.Camera.zoom := Float'Max(Screen_Size.x/1920.0, Screen_Size.y/1080.0);
     end;
 
     function Interpolate_Positions(IPrev_Position, IPosition: IVector2; T: Float) return Vector2 is
         Prev_Position: constant Vector2 := To_Vector2(IPrev_Position)*Cell_Size;
         Curr_Position: constant Vector2 := To_Vector2(IPosition)*Cell_Size;
     begin
-        return Vector2_Lerp(Prev_Position, Curr_Position, C_Float(1.0 - T*T));
+        return Vector2_Lerp(Prev_Position, Curr_Position, 1.0 - T*T);
     end;
 
     type Command_Kind is (Command_Step, Command_Plant);
@@ -1150,7 +1150,7 @@ procedure Eepers is
 
     function Look_At(Looker, Target: Vector2) return Float is
     begin
-        return -Float(Vector2_Line_Angle(Looker, Target));
+        return -Vector2_Line_Angle(Looker, Target);
     end;
 
     procedure Game_Eepers_Turn(Game: in out Game_State) is
@@ -1307,13 +1307,13 @@ procedure Eepers is
     end;
 
     function Repeat(T, Length: Float) return Float is
-        function Floorf(A: C_Float) return C_Float
+        function Floorf(A: Float) return Float
             with
                 Import => True,
                 Convention => C,
                 External_Name => "floorf";
     begin
-        return Clamp(T - Float(Floorf(C_Float(T/Length)))*Length, 0.0, Length);
+        return Clamp(T - Floorf(T/Length)*Length, 0.0, Length);
     end;
 
     function Delta_Angle(A, B: Float) return Float is
@@ -1326,7 +1326,7 @@ procedure Eepers is
     end;
 
     procedure Draw_Eyes(Start, Size: Vector2; Angle: Float; Prev_Kind, Kind: Eyes_Kind; T: Float) is
-        Dir: constant Vector2 := Vector2_Rotate((1.0, 0.0), C_Float(Angle));
+        Dir: constant Vector2 := Vector2_Rotate((1.0, 0.0), Angle);
         Eyes_Ratio: constant Vector2 := (13.0/64.0, 23.0/64.0);
         Eyes_Size: constant Vector2 := Eyes_Ratio*Size;
         Center: constant Vector2 := Start + Size*0.5;
@@ -1339,7 +1339,7 @@ procedure Eepers is
     begin
         for Eye_Index in Eye loop
             for Vertex_Index in Eye_Mesh'Range loop
-                Mesh(Vertex_Index) := Positions(Eye_Index) + Eyes_Size*Vector2_Lerp(Eyes_Meshes(Prev_Kind)(Eye_Index)(Vertex_Index), Eyes_Meshes(Kind)(Eye_Index)(Vertex_Index), C_Float(1.0 - T*T));
+                Mesh(Vertex_Index) := Positions(Eye_Index) + Eyes_Size*Vector2_Lerp(Eyes_Meshes(Prev_Kind)(Eye_Index)(Vertex_Index), Eyes_Meshes(Kind)(Eye_Index)(Vertex_Index), 1.0 - T*T);
             end loop;
             Draw_Triangle_Strip(Mesh, Palette_RGB(COLOR_EYES));
         end loop;
@@ -1395,7 +1395,7 @@ procedure Eepers is
     procedure Game_Player(Game: in out Game_State) is
         Eyes_Angular_Direction: constant Float := Delta_Angle(Game.Player.Eyes_Angle, Look_At(To_Vector2(Game.Player.Position)*Cell_Size + Cell_Size*0.5, To_Vector2(Game.Player.Eyes_Target)*Cell_Size + Cell_Size*0.5));
     begin
-        Game.Player.Eyes_Angle := Game.Player.Eyes_Angle + Eyes_Angular_Direction*EYES_ANGULAR_VELOCITY*Float(Get_Frame_Time);
+        Game.Player.Eyes_Angle := Game.Player.Eyes_Angle + Eyes_Angular_Direction*EYES_ANGULAR_VELOCITY* Get_Frame_Time;
         if Game.Player.Dead then
             if Game.Turn_Animation >= 0.0 then
                 Draw_Rectangle_V(Screen_Player_Position(Game), Cell_Size, Palette_RGB(COLOR_PLAYER));
@@ -1427,7 +1427,7 @@ procedure Eepers is
                 case C.Kind is
                     when Command_Step =>
                         declare
-                            Start_Of_Turn: constant Double := Get_Time;
+                            Start_Of_Turn: constant Long_Float := Get_Time;
                         begin
                             Game.Tutorial.Knows_How_To_Move := True;
                             if Holding_Shift then
@@ -1436,8 +1436,8 @@ procedure Eepers is
 
                             if Game.Tutorial.Phase = Tutorial_Waiting_For_Sprint then
                                 declare
-                                    Step_Timestamp: constant Double := Get_Time;
-                                    Delta_Timestamp: constant Double := Step_Timestamp - Game.Tutorial.Prev_Step_Timestamp;
+                                    Step_Timestamp: constant Long_Float := Get_Time;
+                                    Delta_Timestamp: constant Long_Float := Step_Timestamp - Game.Tutorial.Prev_Step_Timestamp;
                                 begin
                                     if Delta_Timestamp < 0.2 Then
                                         Inc(Game.Tutorial.Hurry_Count);
@@ -1459,7 +1459,7 @@ procedure Eepers is
                     when Command_Plant =>
                         if  Game.Player.Bombs > 0 then
                             declare
-                                Start_Of_Turn: constant Double := Get_Time;
+                                Start_Of_Turn: constant Long_Float := Get_Time;
                             begin
                                 Game.Tutorial.Knows_How_To_Place_Bombs := True;
 
@@ -1508,7 +1508,7 @@ procedure Eepers is
     begin
         for Index in 1..Game.Player.Keys loop
             declare
-                Position: constant Vector2 := (100.0 + C_float(Index - 1)*Cell_Size.X, 100.0);
+                Position: constant Vector2 := (100.0 + float(Index - 1)*Cell_Size.X, 100.0);
             begin
                 Draw_Circle_V(Position, Cell_Size.X*0.25, Palette_RGB(COLOR_DOORKEY));
             end;
@@ -1516,8 +1516,8 @@ procedure Eepers is
 
         for Index in 1..Game.Player.Bomb_Slots loop
             declare
-                Padding: constant C_Float := Cell_Size.X*0.5;
-                Position: constant Vector2 := (100.0 + C_float(Index - 1)*(Cell_Size.X + Padding), 200.0);
+                Padding: constant Float := Cell_Size.X*0.5;
+                Position: constant Vector2 := (100.0 + float(Index - 1)*(Cell_Size.X + Padding), 200.0);
             begin
                 if Index <= Game.Player.Bombs then
                     Draw_Circle_V(Position, Cell_Size.X*0.5, Palette_RGB(COLOR_BOMB));
@@ -1529,20 +1529,20 @@ procedure Eepers is
 
         if Game.Player.Dead then
             declare
-                Label: constant Char_Array := To_C("You Died!");
-                Text_Size: constant Vector2 := Measure_Text_Ex(Death_Font, Label, C_Float(Death_Font_Size), 0.0);
+                Label: constant String := "You Died!";
+                Text_Size: constant Vector2 := Measure_Text_Ex(Death_Font, Label, Float(Death_Font_Size), 0.0);
                 Position: constant Vector2 := Screen_Size*0.5 - Text_Size*0.5;
             begin
-                Draw_Text_Ex(Death_Font, Label, Position + (-2.0, 2.0), C_Float(Death_Font_Size), 0.0, Palette_RGB(COLOR_WALL));
-                Draw_Text_Ex(Death_Font, Label, Position, C_Float(Death_Font_Size), 0.0, Palette_RGB(COLOR_PLAYER));
+                Draw_Text_Ex(Death_Font, Label, Position + (-2.0, 2.0), Float(Death_Font_Size), 0.0, Palette_RGB(COLOR_WALL));
+                Draw_Text_Ex(Death_Font, Label, Position, Float(Death_Font_Size), 0.0, Palette_RGB(COLOR_PLAYER));
             end;
         end if;
     end;
 
-    procedure Health_Bar(Boundary_Start, Boundary_Size: Vector2; Health: C_Float) is
-        Health_Padding: constant C_Float := 10.0;
-        Health_Height: constant C_Float := 10.0;
-        Health_Width: constant C_Float := Boundary_Size.X*Health;
+    procedure Health_Bar(Boundary_Start, Boundary_Size: Vector2; Health: Float) is
+        Health_Padding: constant  Float := 10.0;
+        Health_Height:  constant  Float := 10.0;
+        Health_Width:   constant  Float := Boundary_Size.X*Health;
     begin
         Draw_Rectangle_V(
           Boundary_Start - (0.0, Health_Padding + Health_Height),
@@ -1553,7 +1553,7 @@ procedure Eepers is
 
     procedure Draw_Cooldown_Timer_Bubble(Start, Size: Vector2; Cooldown: Integer; Background: Palette) is
         Text_Color: constant Color := (A => 255, others => 0);
-        Bubble_Radius: constant C_Float := 30.0;
+        Bubble_Radius: constant Float := 30.0;
         Bubble_Center: constant Vector2 := Start + Size*(0.5, 0.0) - (0.0, Bubble_Radius*2.0);
     begin
         Draw_Circle_V(Bubble_Center, Bubble_Radius, Palette_RGB(Background));
@@ -1572,14 +1572,14 @@ procedure Eepers is
                 Eyes_Angular_Direction: constant Float := Delta_Angle(Eeper.Eyes_Angle, Look_At(Position + Size*0.5, To_Vector2(Eeper.Eyes_Target)*Cell_Size + Cell_Size*0.5));
             begin
                 if not Eeper.Dead then
-                    Eeper.Eyes_Angle := Eeper.Eyes_Angle + Eyes_Angular_Direction*EYES_ANGULAR_VELOCITY*Float(Get_Frame_Time);
+                    Eeper.Eyes_Angle := Eeper.Eyes_Angle + Eyes_Angular_Direction*EYES_ANGULAR_VELOCITY* Get_Frame_Time;
                     case Eeper.Kind is
                         when Eeper_Father =>
                             Draw_Rectangle_V(Position, Size, Palette_RGB(Eeper.Background));
                             Draw_Eyes(Position, Size, Eeper.Eyes_Angle, Eeper.Prev_Eyes, Eeper.Eyes, Game.Turn_Animation);
                         when Eeper_Guard | Eeper_Mother =>
                             Draw_Rectangle_V(Position, Size, Palette_RGB(Eeper.Background));
-                            Health_Bar(Position, Size, C_Float(Eeper.Health));
+                            Health_Bar(Position, Size, Eeper.Health);
                             if Eeper.Path(Eeper.Position.Y, Eeper.Position.X) = 1 then
                                 Draw_Cooldown_Timer_Bubble(Position, Size, Eeper.Attack_Cooldown, Eeper.Background);
                             elsif Eeper.Path(Eeper.Position.Y, Eeper.Position.X) >= 0 then
@@ -1588,7 +1588,7 @@ procedure Eepers is
                             Draw_Eyes(Position, Size, Eeper.Eyes_Angle, Eeper.Prev_Eyes, Eeper.Eyes, Game.Turn_Animation);
                         when Eeper_Gnome =>
                             declare
-                                GNOME_RATIO: constant C_Float := 0.7;
+                                GNOME_RATIO: constant Float := 0.7;
                                 GNOME_SIZE: constant Vector2 := Cell_Size*GNOME_RATIO;
                                 GNOME_START: constant Vector2 := Position + Cell_Size*0.5 - GNOME_SIZE*0.5;
                             begin
@@ -1602,7 +1602,7 @@ procedure Eepers is
     end;
 
     Game: Game_State;
-    Title: constant Char_Array := To_C("Eepers (v1.4)");
+    Title: constant String := "Eepers (v1.4)";
 
     Palette_Editor: Boolean := False;
     Palette_Editor_Choice: Palette := Palette'First;
@@ -1614,7 +1614,7 @@ begin
         Put_Line("WARNING: Could not change working directory to the application directory");
     end if;
 
-    Icon := Load_Image(To_C("assets/icon.png"));
+    Icon := Load_Image("assets/icon.png");
 
     Set_Config_Flags(FLAG_WINDOW_RESIZABLE);
     Init_Window(1600, 900, Title);
@@ -1624,24 +1624,24 @@ begin
 
     Init_Audio_Device;
     for Index in Footsteps_Range loop
-        Footsteps_Sounds(Index) := Load_Sound(To_C("assets/sounds/footsteps.mp3"));
+        Footsteps_Sounds(Index) := Load_Sound("assets/sounds/footsteps.mp3");
         Set_Sound_Pitch(Footsteps_Sounds(Index), Footsteps_Pitches(Index));
     end loop;
-    Blast_Sound := Load_Sound(To_C("assets/sounds/blast.ogg"));             -- https://opengameart.org/content/magic-sfx-sample
-    Key_Pickup_Sound := Load_Sound(To_C("assets/sounds/key-pickup.wav"));   -- https://opengameart.org/content/beep-tone-sound-sfx
-    Ambient_Music := Load_Music_Stream(To_C("assets/sounds/ambient.wav"));  -- https://opengameart.org/content/ambient-soundtrack
+    Blast_Sound := Load_Sound("assets/sounds/blast.ogg");             -- https://opengameart.org/content/magic-sfx-sample
+    Key_Pickup_Sound := Load_Sound("assets/sounds/key-pickup.wav");   -- https://opengameart.org/content/beep-tone-sound-sfx
+    Ambient_Music := Load_Music_Stream("assets/sounds/ambient.wav");  -- https://opengameart.org/content/ambient-soundtrack
     Set_Music_Volume(Ambient_Music, 0.5);
-    Bomb_Pickup_Sound := Load_Sound(To_C("assets/sounds/bomb-pickup.ogg")); -- https://opengameart.org/content/pickupplastic-sound
-    Open_Door_Sound := Load_Sound(To_C("assets/sounds/open-door.wav"));     -- https://opengameart.org/content/picked-coin-echo
+    Bomb_Pickup_Sound := Load_Sound("assets/sounds/bomb-pickup.ogg"); -- https://opengameart.org/content/pickupplastic-sound
+    Open_Door_Sound := Load_Sound("assets/sounds/open-door.wav");     -- https://opengameart.org/content/picked-coin-echo
     Set_Sound_Volume(Open_Door_Sound, 0.5);
-    Checkpoint_Sound := Load_Sound(To_C("assets/sounds/checkpoint.ogg"));   -- https://opengameart.org/content/level-up-power-up-coin-get-13-sounds
+    Checkpoint_Sound := Load_Sound("assets/sounds/checkpoint.ogg");   -- https://opengameart.org/content/level-up-power-up-coin-get-13-sounds
     Set_Sound_Pitch(Checkpoint_Sound, 0.8);
-    Guard_Step_Sound := Load_Sound(To_C("assets/sounds/guard-step.ogg"));   -- https://opengameart.org/content/fire-whip-hit-yo-frankie
-    Plant_Bomb_Sound := Load_Sound(To_C("assets/sounds/plant-bomb.wav"));   -- https://opengameart.org/content/ui-soundpack-by-m1chiboi-bleeps-and-clicks
-    Popup_Show_Sound := Load_Sound(To_C("assets/sounds/popup-show.wav"));   -- https://opengameart.org/content/ui-soundpack-by-m1chiboi-bleeps-and-clicks
-    Tutorial_Font := Load_Font_Ex(To_C("assets/fonts/Vollkorn/static/Vollkorn-Regular.ttf"), Tutorial_Font_Size, 0, 0);
+    Guard_Step_Sound := Load_Sound("assets/sounds/guard-step.ogg");   -- https://opengameart.org/content/fire-whip-hit-yo-frankie
+    Plant_Bomb_Sound := Load_Sound("assets/sounds/plant-bomb.wav");   -- https://opengameart.org/content/ui-soundpack-by-m1chiboi-bleeps-and-clicks
+    Popup_Show_Sound := Load_Sound("assets/sounds/popup-show.wav");   -- https://opengameart.org/content/ui-soundpack-by-m1chiboi-bleeps-and-clicks
+    Tutorial_Font := Load_Font_Ex("assets/fonts/Vollkorn/static/Vollkorn-Regular.ttf", Tutorial_Font_Size, 0, 0);
     Gen_Texture_Mipmaps(Tutorial_Font.Texture'Access);
-    Death_Font := Load_Font_Ex(To_C("assets/fonts/Vollkorn/static/Vollkorn-Regular.ttf"), Death_Font_Size, 0, 0);
+    Death_Font := Load_Font_Ex("assets/fonts/Vollkorn/static/Vollkorn-Regular.ttf", Death_Font_Size, 0, 0);
     Gen_Texture_Mipmaps(Death_Font.Texture'Access);
 
     Random_Integer.Reset(Gen);
@@ -1657,7 +1657,7 @@ begin
         Begin_Drawing;
             Clear_Background(Palette_RGB(COLOR_BACKGROUND));
 
-            Holding_Shift := Boolean(Is_Key_Down(KEY_LEFT_SHIFT)) or else Boolean(Is_Key_Down(KEY_RIGHT_SHIFT));
+            Holding_Shift := Is_Key_Down(KEY_LEFT_SHIFT) or else Is_Key_Down(KEY_RIGHT_SHIFT);
             if Game.Player.Dead then
                 Command_Queue.Size := 0;
             else
@@ -1772,7 +1772,7 @@ begin
             end if;
 
             if Game.Turn_Animation > 0.0 then
-                Game.Turn_Animation := (Game.Turn_Animation*TURN_DURATION_SECS - Float(Get_Frame_Time))/TURN_DURATION_SECS;
+                Game.Turn_Animation := (Game.Turn_Animation*TURN_DURATION_SECS - Get_Frame_Time)/TURN_DURATION_SECS;
             end if;
 
             Game_Update_Camera(Game);
@@ -1800,33 +1800,33 @@ begin
                 declare
                     S: String(1..20);
                 begin
-                    Double_IO.Put(S, Game.Duration_Of_Last_Turn, Exp => 0);
-                    Draw_Text(To_C(S), 100, 10, 32, (others => 255));
+                    Long_Float_IO.Put(S, Game.Duration_Of_Last_Turn, Exp => 0);
+                    Draw_Text(S, 100, 10, 32, (others => 255));
                 end;
             end if;
 
             if Palette_Editor then
                 for C in Palette loop
                     declare
-                        Label: constant Char_Array := To_C(C'Image);
+                        Label: constant String := C'Image;
                         Label_Height: constant Integer := 32;
-                        Position: constant Vector2 := (200.0, 200.0 + C_Float(Palette'Pos(C))*C_Float(Label_Height));
+                        Position: constant Vector2 := (200.0, 200.0 + Float(Palette'Pos(C))*Float(Label_Height));
                     begin
-                        Draw_Text(Label, Int(Position.X), Int(Position.Y), Int(Label_Height),
+                        Draw_Text(Label, Integer(Position.X), Integer(Position.Y), Label_Height,
                           (if not Palette_Editor_Selected and C = Palette_Editor_Choice
                            then (R => 255, A => 255, others => 0)
                            else (others => 255)));
 
                         for Comp in HSV_Comp loop
                             declare
-                                Label: constant Char_Array := To_C(Comp'Image & ": " & Palette_HSV(C)(Comp)'Image);
+                                Label: constant String := Comp'Image & ": " & Palette_HSV(C)(Comp)'Image;
                                 Label_Height: constant Integer := 32;
                                 Position: constant Vector2 := (
-                                    X => 600.0 + 200.0*C_Float(HSV_Comp'Pos(Comp)),
-                                    Y => 200.0 + C_Float(Palette'Pos(C))*C_Float(Label_Height)
+                                    X => 600.0 + 200.0*Float(HSV_Comp'Pos(Comp)),
+                                    Y => 200.0 + Float(Palette'Pos(C))*Float(Label_Height)
                                 );
                             begin
-                                Draw_Text(Label, Int(Position.X), Int(Position.Y), Int(Label_Height),
+                                Draw_Text(Label, Integer(Position.X), Integer(Position.Y), Label_Height,
                                   (if Palette_Editor_Selected and C = Palette_Editor_Choice and Comp = Palette_Editor_Component
                                    then (R => 255, A => 255, others => 0)
                                    else (others => 255)));
