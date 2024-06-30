@@ -10,7 +10,6 @@ with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Ada.Strings;
 with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Numerics.Discrete_Random;
-with Ada.Unchecked_Conversion;
 with Ada.Numerics; use Ada.Numerics;
 
 procedure Eepers is
@@ -718,18 +717,10 @@ procedure Eepers is
     end;
 
     procedure Load_Game_From_Image(File_Name: in String; Game: in out Game_State; Update_Player: Boolean; Update_Camera: Boolean) is
-        type Color_Array is array (Natural range <>) of aliased Raylib.Color;
-        --  package Color_Pointer is new Interfaces.C.Pointers(
-        --    Index => Natural,
-        --    Element => Raylib.Color,
-        --    Element_Array => Color_Array,
-        --    Default_Terminator => (others => 0));
-        --  function To_Color_Pointer is new Ada.Unchecked_Conversion (Raylib.Addr, Color_Pointer.Pointer);
-        --  use Color_Pointer;
 
         Img: constant Image := Raylib.Load_Image(File_Name);
         -- TODO FER check that this pointer magic thing holds
-        Pixels: constant access Image := Img.Data'Access;
+        Pixels: constant Color_Array := ((A => 222, others => 0), (A => 222, others => 0)); --Raylib.To_Color_Pointer(Img.Data);
     begin
         if Game.Map /= null then
             Delete_Map(Game.Map);
@@ -759,11 +750,13 @@ procedure Eepers is
         for Row in Game.Map'Range(1) loop
             for Column in Game.Map'Range(2) loop
                 declare
-                    Index: constant Integer := (Row - 1)*Img.Width + (Column - 1);
-                    Pixel: constant Integer := Pixels + Index;
+                   Index: constant Integer := (Row - 1)*Img.Width + (Column - 1);
+                   -- TODO FER This is just a placeholder for now!
+                    Pixel: constant Integer := Pixels'Length + Index;
                     Cel: Level_Cell;
                 begin
-                    if Cell_By_Color(Pixel.all, Cel) then
+                   -- TODO FER fix this crap
+                    if Cell_By_Color(Get_Color(Pixel), Cel) then
                         case Cel is
                             when Level_None =>
                                 Game.Map(Row, Column) := Cell_None;

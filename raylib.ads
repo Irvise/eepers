@@ -1,13 +1,16 @@
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
+with Interfaces.C.Pointers;
 with Raymath; use Raymath;
+with Ada.Unchecked_Conversion;
 
 package Raylib is
    
    -- note: some older versions of GNAT don't have C_bool, so we are defining ours
    type C_Bool is private;
-   type Addr is private;
-   
+   --  type Addr is private;
+   type Addr is mod 2 ** Standard'Address_Size;
+
    type Unsigned_32 is mod 2*32 - 1
      with Size => 32;
    type Vector2_Array is array (Natural range <>) of aliased Vector2;
@@ -80,12 +83,35 @@ package Raylib is
       Ctx_Data: Addr;
    end record;
    type C_Music is private;
+ 
+   type Color_Array is array (Natural range <>) of aliased Color;
+
+   --  package Color_Pointer is new Interfaces.C.Pointers(
+   --    Index => Natural,
+   --    Element => Raylib.Color,
+   --    Element_Array => Color_Array,
+   --    Default_Terminator => (others => 0));
+   --  function To_Color_Pointer is new Ada.Unchecked_Conversion (Addr, Color_Pointer.Pointer);
 
    procedure Init_Window(Width, Height: Integer; Title: in String);
-   procedure Close_Window;
+   procedure Close_Window
+     with
+     Import => True,
+     Convention => C,
+     External_Name => "CloseWindow";
+   
    function Window_Should_Close return Boolean;
-   procedure Begin_Drawing;
-   procedure End_Drawing;
+
+   procedure Begin_Drawing
+     with
+     Import => True,
+     Convention => C,
+     External_Name => "BeginDrawing";
+   procedure End_Drawing
+     with
+     Import => True,
+     Convention => C,
+     External_Name => "EndDrawing";
    procedure Clear_Background(c: Color);
    procedure Draw_Rectangle(posX, posY, Width, Height: Integer; c: Color)
      with Inline;
@@ -126,7 +152,7 @@ package Raylib is
    procedure End_Mode2D;
    function Get_Frame_Time return Float
      with Inline;
-   function Get_Color(hexValue: Natural) return Color
+   function Get_Color(hexValue: Integer) return Color
      with Inline;
    function Color_To_Int(C: Color) return Natural
      with Inline;
@@ -191,8 +217,6 @@ private
    type C_Bool is new Boolean
      with
      Convention => C;
-   
-   type Addr is mod 2 ** Standard'Address_Size;
    
    type C_Color is record
       r: Unsigned_Char;

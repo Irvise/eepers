@@ -10,41 +10,41 @@ package body Raylib is
     end;
     
     
-   procedure Init_Window(Width, Height: int; Title: in char_array)
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "InitWindow";
-   procedure Close_Window
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "CloseWindow";
-   function Window_Should_Close return Bool
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "WindowShouldClose";
-   procedure Begin_Drawing
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "BeginDrawing";
-   procedure End_Drawing
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "EndDrawing";
-   procedure Clear_Background(c: Color)
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "ClearBackground";
+    procedure Init_Window(Width, Height: int; Title: in char_array) is
+       procedure Init_Window(Width, Height: int; Title: in char_array)
+         with
+         Import => True,
+         Convention => C,
+         External_Name => "InitWindow";
+    begin
+       return Init_Window(To_C(Width), To_C(Height), To_C(Title));
+    end;
+    
+   function Window_Should_Close return Boolean is
+      function Window_Should_Close return C_Bool
+        with
+        Import => True,
+        Convention => C,
+        External_Name => "WindowShouldClose";
+   begin
+      return Boolean(Window_Should_Close);
+   end;
+   
+   procedure Clear_Background(c: Color) is
+      procedure Clear_Background(c: Color)
+        with
+        Import => True,
+        Convention => C,
+        External_Name => "ClearBackground";
+   begin
+      return To_Ada(Clear_Background(To_C(Color)));
+   end;
+   
    procedure Draw_Rectangle(posX, posY, Width, Height: int; c: Color)
-     with
-     Import => True,
-     Convention => C,
-     External_Name => "DrawRectangle";
+        with
+        Import => True,
+        Convention => C,
+        External_Name => "DrawRectangle";
    function Get_Screen_Width return int
      with
      Import => True,
