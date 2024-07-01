@@ -11,7 +11,7 @@ package Raylib is
    --  type Addr is private;
    type Addr is mod 2 ** Standard'Address_Size;
 
-   type Unsigned_32 is mod 2*32 - 1
+   type Color_Integer is mod 2**32
      with Size => 32;
    type Vector2_Array is array (Natural range <>) of aliased Vector2;
 
@@ -152,7 +152,7 @@ package Raylib is
    procedure End_Mode2D;
    function Get_Frame_Time return Float
      with Inline;
-   function Get_Color(hexValue: Integer) return Color
+   function Get_Color(hexValue: Color_Integer) return Color
      with Inline;
    function Color_To_Int(C: Color) return Natural
      with Inline;

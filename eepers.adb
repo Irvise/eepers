@@ -756,7 +756,7 @@ procedure Eepers is
                     Cel: Level_Cell;
                 begin
                    -- TODO FER fix this crap
-                    if Cell_By_Color(Get_Color(Pixel), Cel) then
+                    if Cell_By_Color(Get_Color(Color_Integer(Pixel)), Cel) then
                         case Cel is
                             when Level_None =>
                                 Game.Map(Row, Column) := Cell_None;
