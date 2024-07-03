@@ -84,10 +84,10 @@ package body Raylib is
       Draw_Triangle (To_C (V1), To_C (V2), To_C (V3), To_C (C));
    end Draw_Triangle;
 
-   --  procedure Draw_Triangle_Strip (Points : Vector2_Array; C : Color) is
-   --  begin
-   --     Draw_Triangle_Strip(To_C(Points), To_C(Color));
-   --  end;
+   procedure Draw_Triangle_Strip (Points : Vector2_Array; C : Color) is
+   begin
+      Draw_Triangle_Strip(To_C(Points), To_C(Color));
+   end;
 
    procedure Play_Music_Stream (M : Music) is
    begin
@@ -129,9 +129,16 @@ package body Raylib is
       Set_Window_Icon (To_C (Img));
    end Set_Window_Icon;
 
-   --  procedure Gen_Texture_Mipmaps (T : access Texture2D) is
-   --  begin
-   --     Gen_Texture_Mipmaps(To_C(T));
-   --  end;
-
+   procedure Draw_Text_Ex
+     (F       : Font; Text : String; Position : Vector2; Font_Size : Float;
+                                                         Spacing : Float; Tint : Color) is
+   begin
+      Draw_Text_Ex(To_C(F), To_C(Text), To_C(Position), C_Float(Font_Size), C_Float(Spacing), To_C(Tint));
+   end;
+   
+   procedure Gen_Texture_Mipmaps (T : access Texture2D) is
+   begin
+      C_Gen_Texture_Mipmaps(T.all);
+   end;
+   
 end Raylib;

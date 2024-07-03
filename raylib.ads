@@ -435,14 +435,21 @@ private
       Looping  => C_bool (M.Looping), Ctx_Type => int (M.Ctx_Type),
       Ctx_Data => Addr (M.Ctx_Data)) with
      Inline;
+          
+     function To_Ada (F : C_Font) return Font is
+        (Base_Size => Integer(F.Base_Size), Glyph_Count => Integer(F.Glyph_Count), Glyph_Padding => Integer(F.Glyph_Padding), Texture => To_Ada(F.Texture), Rects => Addr(F.Rects), Glyph_Info => Addr(F.Glyph_Info))
+          with Inline;
+        
+        function To_C (F : Font) return C_Font is
+        (Base_Size => Int(F.Base_Size), Glyph_Count => Int(F.Glyph_Count), Glyph_Padding => Int(F.Glyph_Padding), Texture => To_C(F.Texture), Rects => Addr(F.Rects), Glyph_Info => Addr(F.Glyph_Info))
+          with Inline;
 
    -------------------------------
    --  Import Raylib functions  --
    -------------------------------
 
-   procedure C_Draw_Triangle_Strip
-     (Points : Vector2_Array; Point_Count : int;
-      C      : C_Color) with -- TODO Fix array
+   procedure Draw_Triangle_Strip
+     (Points : Vector2_Array; C : C_Color) with -- TODO Fix array
      Import => True, Convention => C, External_Name => "DrawTriangleStrip";
 
    procedure C_Init_Window (Width, Height : int; Title : in char_array) with
@@ -499,7 +506,7 @@ private
      Import => True, Convention => C, External_Name => "DrawText";
 
    procedure Draw_Text_Ex
-     (F : C_Font; Text : char_array; Position : Vector2; Font_Size : C_float;
+     (F : C_Font; Text : char_array; Position : C_Vector2; Font_Size : C_float;
       Spacing : C_float; TInt : C_Color) with
      Import => True, Convention => C, External_Name => "DrawTextEx";
    procedure Set_Target_FPS (Fps : int) with
@@ -563,13 +570,13 @@ private
 
    function Load_Font_Ex
      (File_Name       : char_array; Font_Size : int; Codepoints : Addr;
-      Codepoint_Count : Integer) return C_Font with
+      Codepoint_Count : int) return C_Font with
      Import => True, Convention => C, External_Name => "LoadFontEx";
    function Measure_Text_Ex
      (F : C_Font; Text : char_array; Font_Size : C_float; Spacing : C_float)
       return C_Vector2 with
      Import => True, Convention => C, External_Name => "MeasureTextEx";
-   procedure Gen_Texture_Mipmaps (T : access C_Texture2D) with
+   procedure C_Gen_Texture_Mipmaps (T : access C_Texture2D) with
      Import => True, Convention => C, External_Name => "GenTextureMipmaps";
 
    ----------------------------------------------------------
@@ -642,6 +649,16 @@ private
 
    function Is_Music_Stream_Playing (M : Music) return Boolean is
      (Boolean (Is_Music_Stream_Playing (To_C (M))));
+     
+   function Load_Font_Ex
+     (File_Name       : String; Font_Size : Integer; Codepoints : Addr;
+                                                     Codepoint_Count : Integer) return Font is
+      (To_Ada(Load_Font_Ex(To_C(File_Name), Int(Font_Size), Addr(Codepoints), Int(Codepoint_Count))));
+      
+   function Measure_Text_Ex
+     (F : Font; Text : String; Font_Size : Float; Spacing : Float)
+     return Vector2 is
+      (To_Ada(Measure_Text_Ex(To_C(F), To_C(Text), C_Float(Font_Size), C_Float(Spacing))));
    
    --  function Color_To_Int (C : Color) return Unsigned_32 is
    --     (); -- TODO
