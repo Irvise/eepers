@@ -9,13 +9,9 @@ package Test is
    end record;
    type C_Vector2 is private;
 
-   function To_C(Vector : Vector2) return C_Vector2 is
-      (return V: C_Vector2(X => C_Float(Vector.X), Y => C_Float(Vector.Y)) do null;
-    end return;);
    
-   function "+"(a, b: Vector2) return Vector2 is
-      (( (To_C(A) + To_C(B)) ))
-      with Inline;
+   function "+"(a, b: Vector2) return Vector2
+     with Inline;
 
 private
    type C_Vector2 is record
@@ -24,6 +20,9 @@ private
    end record
      with Convention => C_Pass_By_Copy;
    
+   function To_C(Vector : Vector2) return C_Vector2 is
+--      (C_Vector2(X => C_Float(Vector.X), Y => C_Float(Vector.Y)));
+      (X => C_Float(Vector.X), Y => C_Float(Vector.Y));
 
 
    --  function To_C(Vector : Vector2) return C_Vector2 is
@@ -36,5 +35,8 @@ private
      Import => True,
      Convention => C,
      External_Name => "Vector2Add";
- 
+   
+   function "+"(a, b: Vector2) return Vector2 is
+      (To_Ada(To_C(A) + To_C(B)));
+
 end;
