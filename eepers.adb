@@ -1,6 +1,6 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Raylib; use Raylib;
-with Raymath; use Raymath;
+with Raylib.Raymath; use Raylib.Raymath;
 with Ada.Strings.Unbounded;
 use Ada.Strings.Unbounded;
 with Ada.Containers.Vectors;
