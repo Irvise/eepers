@@ -1,4 +1,4 @@
-priVate with Interfaces.C;
+private with Interfaces.C;
 
 package Raylib.Raymath
 is
@@ -22,7 +22,7 @@ is
    function Vector2_Lerp (V1, V2 : Vector2; Amount : Float) return Vector2 with
      Inline;
 
-priVate
+private
 
    use Interfaces.C;
 
@@ -39,18 +39,18 @@ priVate
    function "*" (a, b : C_Vector2) return C_Vector2 with
      Import => True, ConVention => C, External_Name => "Vector2Multiply";
 
-   function "*" (V : C_Vector2; Scale : C_float) return C_Vector2 with
+   function "*" (V : C_Vector2; Scale : C_Float) return C_Vector2 with
      Import => True, ConVention => C, External_Name => "Vector2Scale";
 
    function Vector2_Rotate
-     (V : C_Vector2; Angle : C_float) return C_Vector2 with
+     (V : C_Vector2; Angle : C_Float) return C_Vector2 with
      Import => True, ConVention => C, External_Name => "Vector2Rotate";
 
-   function Vector2_Line_Angle (Start, Finish : C_Vector2) return C_float with
+   function Vector2_Line_Angle (Start, Finish : C_Vector2) return C_Float with
      Import => True, ConVention => C, External_Name => "Vector2LineAngle";
 
    function Vector2_Lerp
-     (V1, V2 : C_Vector2; Amount : C_float) return C_Vector2 with
+     (V1, V2 : C_Vector2; Amount : C_Float) return C_Vector2 with
      Import => True, ConVention => C, External_Name => "Vector2Lerp";
 
    ----------------------------------------------------------
@@ -67,15 +67,15 @@ priVate
      (To_Ada (To_C (a) * To_C (b)));
 
    function "*" (V : Vector2; Scale : Float) return Vector2 is
-     (To_Ada (To_C (V) * C_float (Scale)));
+     (To_Ada (To_C (V) * C_Float (Scale)));
 
    function Vector2_Rotate (V : Vector2; Angle : Float) return Vector2 is
-     (To_Ada (Vector2_Rotate (To_C (V), C_float (Angle))));
+     (To_Ada (Vector2_Rotate (To_C (V), C_Float (Angle))));
 
    function Vector2_Line_Angle (Start, Finish : Vector2) return Float is
      (Float (Vector2_Line_Angle (To_C (Start), To_C (Finish))));
 
    function Vector2_Lerp (V1, V2 : Vector2; Amount : Float) return Vector2 is
-     (To_Ada (Vector2_Lerp (To_C (V1), To_C (V2), C_float (Amount))));
+     (To_Ada (Vector2_Lerp (To_C (V1), To_C (V2), C_Float (Amount))));
 
 end Raylib.Raymath;
